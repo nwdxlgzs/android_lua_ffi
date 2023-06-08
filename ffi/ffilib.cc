@@ -1077,7 +1077,7 @@ struct ffi_module {
         luaL_checkany(L, 2);
         if (lua_type(L, 2) == LUA_TFUNCTION && !lua_iscfunction(L, 2)) {
             //mod by nwdxlgzs
-            return luaL_error(L, "Lua Function can not cast to %s", lua_tostring(L,1));
+            return luaL_error(L, "Lua Function can not cast to %s", lua_tostring(L, 1));
         }
         ffi::make_cdata(L, check_ct(L, 1), ffi::RULE_CAST, 2);
         return 1;
@@ -1174,6 +1174,40 @@ struct ffi_module {
     static int get_lua_State(lua_State *L) {
         lua_pushlightuserdata(L, L);
         return 1;
+    }
+
+
+    static int ffi_lua_topointer(lua_State *L) {
+        StkId o = L->top - 1;
+        switch (ttype(o)) {
+            case LUA_TTABLE:
+                lua_pushlightuserdata(L, hvalue(o));
+                return 1;
+            case LUA_TLCL:
+                lua_pushlightuserdata(L, clLvalue(o));
+                return 1;
+            case LUA_TCCL:
+                lua_pushlightuserdata(L, clCvalue(o));
+                return 1;
+            case LUA_TLCF:
+                lua_pushlightuserdata(L, cast(void *, cast(size_t, fvalue(o))));
+                return 1;
+            case LUA_TTHREAD:
+                lua_pushlightuserdata(L, thvalue(o));
+                return 1;
+            case LUA_TUSERDATA:
+                lua_pushlightuserdata(L, getudatamem(uvalue(o)));
+                return 1;
+            case LUA_TLIGHTUSERDATA:
+                lua_pushlightuserdata(L, pvalue(o));
+                return 1;
+            case LUA_TSHRSTR:
+            case LUA_TLNGSTR:
+                lua_pushlightuserdata(L, tsvalue(o));
+                return 1;
+            default:
+                return NULL;
+        }
     }
 
     static int typeof_f(lua_State *L) {
@@ -1626,6 +1660,7 @@ struct ffi_module {
                 {"type",        type_f},
 
                 {"getLuaState", get_lua_State},
+                {"luatopointer",   ffi_lua_topointer},
 
                 {nullptr,       nullptr}
         };
